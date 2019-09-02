@@ -12,6 +12,8 @@
 
         this.init();
 
+        this.original = new Set(this.positive);
+
         let satisfied = this.solve();
 
         console.log((satisfied * 100) + '%');
@@ -26,9 +28,7 @@
         console.log(clique.length);
 
     };
-
-    // divides the clauses that can be satisfied with positive literals
-    // and with negative literals
+    
     sat.prototype.init = function () {
 
         for (let i = 0; i < this.instance.length; i++) {
@@ -63,7 +63,11 @@
         let prevCurrent = 0;
         let exclude = new Set();
 
-        do {
+        let retPositive = null;
+
+        while (current <= prevCurrent) {
+
+            console.log(iter + ' ' + current);
 
             prevCurrent = current;
 
@@ -71,11 +75,10 @@
             setArray = this.shuffle(setArray);
             this.positive = new Set(setArray);
 
-
+            let unadded = [];
+            let added = [];
             
             for (let positive of this.positive) {
-
-                
 
                     this.assignments[positive[0]] = true;
 
@@ -84,20 +87,61 @@
                     if (this.doesSatisfy()) {
 
                         current = percent;
-
+                        added.push(positive[0]);
                         this.positive.delete(positive);
 
                     }  else {
 
                         this.assignments[positive[0]] = false;
+                        unadded.push(positive)[0];
 
                     }
+
+            }
+
+            added = this.shuffle(added);
+            unadded = this.shuffle(unadded);
+
+            for (let i = 0; i < added.length; i++) {
+                
+                this.assignments[added[i]] = false;
+                let add = 0;
+
+                for (let j = 0; j < unadded.length; j++) {
+
+                    if (! unadded[j]) continue;
+
+                    this.assignments[unadded[j]] = true;
+
+                    if (this.doesSatisfy()) {
+
+                        unadded[j] = null;
+                        this.positive.delete(unadded[j]);
+                        add++;
+                    
+                    } else {
+
+                        this.assignments[unadded[j]] = false;
+
+                    }
+
+                }
+
+                if (add > 1) {
+
+                    current = this.percentage();
+
+                } else {
+
+                    this.assignments[added[i]] = true;
+
+                }
 
             }
             
             iter++;
 
-        } while (current !== prevCurrent);
+        }
 
         return current;
 
@@ -157,7 +201,7 @@
         let satisfied = 0;
         let total = 0;
 
-        for (let positive of this.positive) {
+        for (let positive of this.original) {
 
             if (this.assignments[positive[0]] === true) {
                 satisfied++;
