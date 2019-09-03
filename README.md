@@ -14,3 +14,5 @@ Reductions preserve the approximation ratio and [1](https://epubs.siam.org/doi/p
 Probabilistic greedy heuristic algorithm is 2-approximation algorithm.
 Hence __this__ is also 2-approximation algorithm for max clique 
 increasing the current best known approximation O(n(log log n)^2/(log n)^3)
+
+Reduction is found in parser.js, the implementation of the algorithm is in sat.js

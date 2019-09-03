@@ -64,7 +64,7 @@ let Parser = function() {
 			nodes.add(edges[i][1]);
 
 		}
-
+		/* reduction to MAX DNF and then to MIN SAT */
 		let clauses = [];
 		let adjancet = {};
 
@@ -98,7 +98,7 @@ let Parser = function() {
 			clauses.push(clause);
 
 		}
-
+		/* End of reduction */
 		let startTime = new Date().getTime();
 
 		new sat(clauses, max);
