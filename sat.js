@@ -14,7 +14,8 @@
 
         let clique = this.solve();
 
-        console.log(JSON.stringify(clique) + ' found with size ' + clique.length);
+        console.log(JSON.stringify(clique) + ' found');
+        console.log('with size ' + clique.length);
         console.log('known best ' + (knownBest ? knownBest + ' (found is ' + clique.length / knownBest * 100 +'%)' : 'unknown'));
         
     };
@@ -84,8 +85,10 @@
 
             let probX = y.size / (y.size + x.size);
             let probY = 1 - probX;
+            let randomX = Math.random(probX);
+            let randomY = Math.random(probY);
 
-            if (probX < probY) {
+            if (randomX > randomY) {
 
                 for (let set of x) {
 

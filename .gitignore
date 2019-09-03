@@ -1,3 +1,5 @@
 node_modules
 .DS_Store
 notes.txt
+instances/C4000.5.clq
+instances/MANN_a81.clq
