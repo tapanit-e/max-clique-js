@@ -7,10 +7,18 @@ let Parser = function() {
 
 	if (! args.length) {
 
-		console.log('Usage:\nnode main.js path/to/dimacs1 path/to/dimacs2 ...');
+		console.log('Usage:\nnode main.js [--max=N] path/to/dimacs1.clq path/to/dimacs2.clq ...');
 		return;
 
 	}
+
+	let max = null;
+
+	if (args[0].indexOf('--max=') > -1) {
+		max = args[0].split('=')[1];
+		args.shift();
+	}
+	
 
 	for (let arg = 0; arg < args.length; arg++) {
 
@@ -42,8 +50,6 @@ let Parser = function() {
 
 			temp.shift(); // edge
 
-			
-
 			for (let j = 0; j < temp.length; j++)
 				pair.push(parseInt(temp[j].replace(/(\r\n\t|\n|\r\t)/gm, "")));
 
@@ -60,10 +66,6 @@ let Parser = function() {
 		}
 
 		let clauses = [];
-
-		for (let node of nodes)
-			clauses.push([node]);
-
 		let adjancet = {};
 
 		for (let node of nodes)
@@ -82,19 +84,24 @@ let Parser = function() {
 		for (let adj in adjancet) {
 
 			let set = new Set(adjancet[adj]);
+			let clause = [-adj];
 
 			for (let node of nodes) {
 
 				if (! set.has(node) && node != adj) {
-					clauses.push([-adj, -node]);
+				
+					clause.push(node);
+				
 				}
 			}
+
+			clauses.push(clause);
 
 		}
 
 		let startTime = new Date().getTime();
 
-		new sat(clauses);
+		new sat(clauses, max);
 		
 		let endTime = new Date().getTime();
 		let total = endTime - startTime;

@@ -3,217 +3,123 @@
     'use strict';
 
     // instance is in dimacs format
-    const sat = function (instance) {
+    const sat = function (instance, knownBest = null) {
 
         this.instance = instance;
-        this.positive = new Set();
-        this.negative = new Set();
-        this.assignments = {};
+        this.clauses = {};
+        this.literals = {};
+        this.knownBest = knownBest;
 
         this.init();
 
-        this.original = new Set(this.positive);
+        let clique = this.solve();
 
-        let satisfied = this.solve();
+        console.log(JSON.stringify(clique) + ' found with size ' + clique.length);
+        console.log('known best ' + (knownBest ? knownBest + ' (found is ' + clique.length / knownBest * 100 +'%)' : 'unknown'));
+        
+    };
+    
+    // initializes the clauses
+    sat.prototype.init = function () {
 
-        console.log((satisfied * 100) + '%');
+        for (let i = 0; i < this.instance.length; i++)
+            this.clauses[JSON.stringify(this.instance[i])] = true;
+
+        this.instance = this.shuffle(this.instance);
+
+        for (let i = 0; i < this.instance.length; i++)
+            for (let j = 0; j < this.instance[i].length; j++)
+                this.literals[this.instance[i][j]] = true;
+
+    };
+
+    // returns the clauses that the assignment would satisfy
+    sat.prototype.getSatisfying = function(literal) {
+
+        let set = new Set();
+
+        for (let clause in this.clauses) {
+
+            clause = JSON.parse(clause);
+
+            for (let l = 0; l < clause.length; l++)
+                if (literal == clause[l]) {
+                    set.add(clause);
+                    break;
+                }
+
+        }
+
+        return set;
+
+    };
+
+    // solves the MINSAT problem with probabilistic greedy heuristic algorithm
+    // gives 2-approximation
+    // https://epubs.siam.org/doi/pdf/10.1137/S0895480191220836
+    // returns the vertices in the found clique
+    sat.prototype.solve = function() {
+
+        for (let literal in this.literals) {
+
+            let positive, negative;
+
+            if (+literal > 0) {
+
+                positive = +literal;
+                negative = +literal * -1;
+
+            } else {
+
+                positive = +literal * -1;
+                negative = +literal;
+
+            }
+
+            let x = this.getSatisfying(positive);
+            let y = this.getSatisfying(negative);
+
+            if (x.size === 0) continue;
+            if (y.size === 0) continue;
+
+            let probX = y.size / (y.size + x.size);
+            let probY = 1 - probX;
+
+            if (probX < probY) {
+
+                for (let set of x) {
+
+                    delete this.clauses[JSON.stringify(set)];
+
+                }
+
+            } else {
+
+                for (let set of y) {
+
+                    delete this.clauses[JSON.stringify(set)];
+
+                }
+
+            }
+
+        }
 
         let clique = [];
 
-        for (let assign in this.assignments) {
-            if (this.assignments[assign] === true)
-                clique.push(assign);
-        }
+        for (let clause in this.clauses) {
 
-        console.log(clique.length);
+            clause = JSON.parse(clause);
 
-    };
-    
-    sat.prototype.init = function () {
-
-        for (let i = 0; i < this.instance.length; i++) {
-
-            if (this.instance[i].length === 1)
-                this.positive.add(this.instance[i]);
-            else   
-                this.negative.add(this.instance[i]);
+            for (let i = 0; i < clause.length; i++)
+                if (clause[i] < 0)
+                    clique.push(-clause[i]);
 
         }
 
-        for (let i = 0; i < this.instance.length; i++)
-            for (let j = 0; j < this.instance[i].length; j++) {
+        return clique;
 
-                let literal = null;
-
-                if (this.instance[i][j] < 0)
-                    literal = -this.instance[i][j];
-                else   
-                    literal = this.instance[i][j];
-
-                    this.assignments[literal] = false;
-            
-            }
-
-    };
-
-    sat.prototype.solve = function() {
-
-        let iter = 0;
-        let current = this.percentage();
-        let prevCurrent = 0;
-        let exclude = new Set();
-
-        let retPositive = null;
-
-        while (current <= prevCurrent) {
-
-            console.log(iter + ' ' + current);
-
-            prevCurrent = current;
-
-            let setArray = Array.from(this.positive);
-            setArray = this.shuffle(setArray);
-            this.positive = new Set(setArray);
-
-            let unadded = [];
-            let added = [];
-            
-            for (let positive of this.positive) {
-
-                    this.assignments[positive[0]] = true;
-
-                    let percent = this.percentage();
-
-                    if (this.doesSatisfy()) {
-
-                        current = percent;
-                        added.push(positive[0]);
-                        this.positive.delete(positive);
-
-                    }  else {
-
-                        this.assignments[positive[0]] = false;
-                        unadded.push(positive)[0];
-
-                    }
-
-            }
-
-            added = this.shuffle(added);
-            unadded = this.shuffle(unadded);
-
-            for (let i = 0; i < added.length; i++) {
-                
-                this.assignments[added[i]] = false;
-                let add = 0;
-
-                for (let j = 0; j < unadded.length; j++) {
-
-                    if (! unadded[j]) continue;
-
-                    this.assignments[unadded[j]] = true;
-
-                    if (this.doesSatisfy()) {
-
-                        unadded[j] = null;
-                        this.positive.delete(unadded[j]);
-                        add++;
-                    
-                    } else {
-
-                        this.assignments[unadded[j]] = false;
-
-                    }
-
-                }
-
-                if (add > 1) {
-
-                    current = this.percentage();
-
-                } else {
-
-                    this.assignments[added[i]] = true;
-
-                }
-
-            }
-            
-            iter++;
-
-        }
-
-        return current;
-
-    };
-
-    sat.prototype.doesSatisfy = function () {
-
-        for (let negative of this.negative) {
-            if (this.assignments[-negative[0]] === true && this.assignments[-negative[1]] === true)
-                return false;
-        }
-
-        return true;
-
-    };
-
-    sat.prototype.leastNegative = function(excluded) {
-
-        let map = {};
-
-        for (let negative of this.negative) {
-
-            if (excluded.has(negative[0]) || excluded.has(negative[1])) continue;
-
-            if (map[negative[0]])
-                map[negative[0]]++;
-            else
-                map[negative[0]] = 1;
-
-            if (map[negative[1]])
-                map[negative[1]]++;
-            else
-                map[negative[1]] = 1;
-
-        }
-
-        let max = -Infinity;
-        let ret = null;
-
-        for (let key in map) {
-
-            if (map[key] > max) {
-
-                max = map[key];
-                ret = key;
-
-            }
-
-        }
-
-        return ret;
-
-    };
-
-    sat.prototype.percentage = function() {
-
-        let satisfied = 0;
-        let total = 0;
-
-        for (let positive of this.original) {
-
-            if (this.assignments[positive[0]] === true) {
-                satisfied++;
-            }
-
-            total++;
-
-        }
-
-        return satisfied / total;
-
-    };
+    }; 
 
     // shuffles an array for random ordering the literals
     sat.prototype.shuffle = function (a) {
