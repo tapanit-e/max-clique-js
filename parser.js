@@ -48,7 +48,8 @@ let Parser = function() {
 
 			let temp = data[i].split(' ');
 
-			temp.shift(); // edge
+			if (temp[0] && temp[0].trim() === 'e')
+				temp.shift(); // edge
 
 			for (let j = 0; j < temp.length; j++)
 				pair.push(parseInt(temp[j].replace(/(\r\n\t|\n|\r\t)/gm, "")));
